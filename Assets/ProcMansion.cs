@@ -49,8 +49,10 @@ public class ProcMansion : MonoBehaviour {
 		directions.Add(new Direction("west", new Vector3(-1, 0, 0)));
 		directions.Add(new Direction("east", new Vector3(1, 0, 0)));
 
-		xLength = Random.Range (5, 20);
-		zLength = Random.Range (5, 20);
+		xLength = Random.Range (10, 20);
+		zLength = Random.Range (10, 20);
+		//xLength = 20;
+		//zLength = 20;
 
 		// Place grass tiles
 		for (int x = 0; x < xLength; x++) {
@@ -73,48 +75,61 @@ public class ProcMansion : MonoBehaviour {
 			for (int y = 0; y < 20; y++) {
 				for (int z = 0; z < 20; z++) {
 					Vector3 templatePos = (Vector3.right * (unitLength * x)) + (Vector3.forward * (unitLength * z)) + (Vector3.up * (unitLength * y));
+					Vector3 pos = new Vector3 (x, y, z);
 					if (map [x, y, z] == 1) {
 						Instantiate (grassTemplate, templatePos, Quaternion.identity, transform);
-					} else if (map [x, y, z] == 2) {
+					} else if (map [x, y, z] == 2 || map[x, y, z] == 7 || map[x, y, z] == 8) {
 						RoomTile roomTile = Instantiate (roomTileTemplate, templatePos, Quaternion.identity, transform).GetComponent<RoomTile> ();
+
+						bool isAboveGround;
+						if (y > 10) {
+							isAboveGround = true;
+						} else {
+							isAboveGround = false;
+						}
 
 						if (y == 19) {
 							roomTile.hasRoof = true;
-						} else if (map [x, y + 1, z] != 2) {
+						} else if (!IsFilled(pos + Vector3.up) ) {
 							roomTile.hasRoof = true;
 						} else {
 							roomTile.hasRoof = false;
 						}
 
-						if (y == 0) {
-							roomTile.hasFloor = true;
-						} else if (map [x, y - 1, z] != 2) {
-							roomTile.hasFloor = true;
+						if (map [x, y, z] == 7 || map[x, y, z] == 8) {
+							if (y == 0) {
+								roomTile.hasFloor = true;
+							} else if (IsFilled (pos + Vector3.down)) {
+								roomTile.hasFloor = false;
+							} else {
+								roomTile.hasFloor = true;
+							}
 						} else {
-							roomTile.hasFloor = false;
+							roomTile.hasFloor = true;
 						}
 							
 						roomTile.Init ();
 
-						foreach (Direction direction in directions) {
-							if (!IsOnMap (new Vector3 (x, y, z) + direction.vector)) {
-								if (roomTile.hasFloor) {
-									roomTile.walls [direction.name].type = RandomWallType (true);
-								} else {
-									roomTile.walls [direction.name].type = RandomWallType (false);
-								}
-							} else if (map [x + (int)direction.vector.x, y + (int)direction.vector.y, z + (int)direction.vector.z] != 2) {
 
-								// Test if we're in the air
-								if (y == 11) {
-									roomTile.walls [direction.name].type = RandomWallType (true);
-									// Test whether there's a roof to stand on.
-								} else if (map [x + (int)direction.vector.x, y + (int)direction.vector.y - 1, z + (int)direction.vector.z] != 2) {
-									roomTile.walls [direction.name].type = RandomWallType (false);
-								} else if (roomTile.hasFloor) {
-									roomTile.walls [direction.name].type = RandomWallType (true);
+
+						foreach (Direction direction in directions) {
+							if (!IsOnMap (pos + direction.vector)) {
+								if (roomTile.hasFloor) {
+									roomTile.walls [direction.name].type = RandomWallType (true, isAboveGround);
 								} else {
-									roomTile.walls [direction.name].type = RandomWallType (false);
+									roomTile.walls [direction.name].type = RandomWallType (false, isAboveGround);
+								}
+							} else if (!IsFilled(pos + direction.vector) ) {
+
+								if (y == 11) {
+									roomTile.walls [direction.name].type = RandomWallType (true, isAboveGround);
+									// Test whether there's a roof to stand on.
+								} else if (!IsFilled(pos+direction.vector + Vector3.down) ) {
+									roomTile.walls [direction.name].type = RandomWallType (false, isAboveGround);
+								} else if (roomTile.hasFloor) {
+									roomTile.walls [direction.name].type = RandomWallType (true, isAboveGround);
+								} else {
+									roomTile.walls [direction.name].type = RandomWallType (false, isAboveGround);
 								}
 							} else {
 								roomTile.walls [direction.name].type = WallTile.Type.none;
@@ -125,6 +140,14 @@ public class ProcMansion : MonoBehaviour {
 					} else if (map [x, y, z] == 3 || map [x, y, z] == 4 || map [x, y, z] == 5 || map [x, y, z] == 6) {
 						RoomTile roomTile = Instantiate (roomTileTemplate, templatePos, Quaternion.identity, transform).GetComponent<RoomTile> ();
 						roomTile.isStairs = true;
+
+						if (y == 0) {
+							roomTile.hasFloor = true;
+						} else if (!IsFilled (pos + Vector3.down)) {
+							roomTile.hasFloor = true;
+						} else {
+							roomTile.hasFloor = false;
+						}
 
 						if (map [x, y, z] == 3) {
 							roomTile.stairsDirectionName = "north";
@@ -138,7 +161,17 @@ public class ProcMansion : MonoBehaviour {
 
 						roomTile.Init ();
 
+						foreach (Direction direction in directions) {
+							if (!IsOnMap (pos + direction.vector)) {
+								roomTile.walls [direction.name].type = WallTile.Type.solid;
+							} else if (IsFilled (pos + direction.vector)) {
+								roomTile.walls [direction.name].type = WallTile.Type.none;
+							} else {
+								roomTile.walls [direction.name].type = WallTile.Type.solid;
+							}
+						}
 
+						roomTile.InitWalls ();
 					}
 				}
 			}
@@ -255,7 +288,9 @@ public class ProcMansion : MonoBehaviour {
 			for (int j = 0; j < roomZLength; j++) {
 				for (int k = 0; k < roomYLength; k++) {
 					tilePos = startingPos + (Vector3.forward * j) + (Vector3.right * i) + (Vector3.up * k);
-					map [(int)tilePos.x, (int)tilePos.y, (int)tilePos.z] = 2;
+					if (!IsFilled(tilePos) ) {
+						map [(int)tilePos.x, (int)tilePos.y, (int)tilePos.z] = 7;
+					}						
 				}
 			}
 		}
@@ -306,7 +341,7 @@ public class ProcMansion : MonoBehaviour {
 
 		if (goingUp) {
 			tilePos = pos + Vector3.up;
-			map [(int)tilePos.x , (int)tilePos.y, (int)tilePos.z] = 2;
+			map [(int)tilePos.x , (int)tilePos.y, (int)tilePos.z] = 8;
 		}
 			
 		int stairsCode = 2;
@@ -345,7 +380,7 @@ public class ProcMansion : MonoBehaviour {
 
 		// space above stairs
 		tilePos += Vector3.up;
-		map [(int)tilePos.x , (int)tilePos.y, (int)tilePos.z] = 2;
+		map [(int)tilePos.x , (int)tilePos.y, (int)tilePos.z] = 8;
 
 		// Space beyond stairs
 		if (goingUp) {
@@ -353,7 +388,7 @@ public class ProcMansion : MonoBehaviour {
 			map [(int)tilePos.x, (int)tilePos.y, (int)tilePos.z] = 2;
 		} else {
 			tilePos = pos + (exitDirection * 2);
-			map [(int)tilePos.x, (int)tilePos.y, (int)tilePos.z] = 2;
+			map [(int)tilePos.x, (int)tilePos.y, (int)tilePos.z] = 8;
 			tilePos = pos + (exitDirection * 2) + (Vector3.down);
 			map [(int)tilePos.x, (int)tilePos.y, (int)tilePos.z] = 2;
 		}
@@ -398,7 +433,7 @@ public class ProcMansion : MonoBehaviour {
 			pos += exitDirection;
 			if (!IsOnMap (pos)) {
 				return openSpaces;
-			} else if (map [(int)pos.x, (int)pos.y, (int)pos.z] == 2) {
+			} else if (IsFilled(pos) && !IsFoyer(pos) ) {
 				return openSpaces;
 			} else {
 				openSpaces++;
@@ -456,14 +491,19 @@ public class ProcMansion : MonoBehaviour {
 		return possibleExits;
 	}	
 
-	WallTile.Type RandomWallType( bool isIncludingDoors) {
-		int choice = (int)Random.Range (1, 4);
-		if (choice == 1) {
+	WallTile.Type RandomWallType( bool isIncludingDoors, bool isAboveGround) {
+		int choice = (int)Random.Range (0, 33);
+		if (choice < 11) {
 			return WallTile.Type.solid;
-		} else if (choice == 2) {
+		} else if (choice > 10 && choice < 21 && isAboveGround) {
 			return WallTile.Type.window;
-		} else if (choice == 3 && isIncludingDoors) {
+		} else if (choice > 20 && choice < 31 && isIncludingDoors && isAboveGround) {
 			return WallTile.Type.door;
+		} else if (choice == 31) {
+			return WallTile.Type.painting;
+		} else if (choice == 32) {
+			return WallTile.Type.torch;
+			//return WallTile.Type.solid;
 		} else {
 			return WallTile.Type.solid;
 		}
@@ -484,6 +524,24 @@ public class ProcMansion : MonoBehaviour {
 			return false;
 		} else {
 			return true;
+		}
+	}
+
+	bool IsFilled(Vector3 pos) {
+		int unitCode = map [(int)pos.x, (int)pos.y, (int)pos.z];
+		if (unitCode == 2 || unitCode == 3 || unitCode == 4 || unitCode == 5 || unitCode == 6 || unitCode == 7 || unitCode == 8) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	bool IsFoyer(Vector3 pos) {
+		int unitCode = map [(int)pos.x, (int)pos.y, (int)pos.z];
+		if (unitCode == 7) {
+			return true;
+		} else {
+			return false;
 		}
 	}
 }

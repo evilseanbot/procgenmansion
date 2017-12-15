@@ -6,6 +6,8 @@ public class WallTile : MonoBehaviour {
 	public GameObject solidWallTemplate;
 	public GameObject doorWallTemplate;
 	public GameObject windowWallTemplate;
+	public GameObject paintingWallTemplate;
+	public GameObject torchWallTemplate;
 
 	public Type type;
 
@@ -14,7 +16,9 @@ public class WallTile : MonoBehaviour {
 		none,
 		solid,
 		door,
-		window
+		window,
+		painting,
+		torch
 	}
 
 	public void Init() {
@@ -24,6 +28,10 @@ public class WallTile : MonoBehaviour {
 			Instantiate (doorWallTemplate, transform.position, transform.rotation, transform);
 		} else if (type == Type.window) {
 			Instantiate (windowWallTemplate, transform.position, transform.rotation, transform);
+		} else if (type == Type.painting) {
+			Instantiate (paintingWallTemplate, transform.position, transform.rotation, transform);
+		} else if (type == Type.torch) {
+			Instantiate (torchWallTemplate, transform.position, transform.rotation, transform);
 		}
 	}
 }

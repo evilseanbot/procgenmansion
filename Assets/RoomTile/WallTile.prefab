@@ -57,4 +57,8 @@ MonoBehaviour:
     type: 2}
   windowWallTemplate: {fileID: 1395840790062652, guid: 5887f056d091714428be817fff57a97f,
     type: 2}
+  paintingWallTemplate: {fileID: 1685708021550556, guid: fb7a8b4fbcfef0740b6d1d37fe1c52e0,
+    type: 2}
+  torchWallTemplate: {fileID: 1772756276733950, guid: 1703894038d912544b1e4b27ae7d9b43,
+    type: 2}
   type: 0
